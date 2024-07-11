@@ -611,7 +611,9 @@ export function decrementExpectedAwaits() {
     return true;
 }
 
+console.log("icicic ", ''+nativePromiseThen, (''+nativePromiseThen).indexOf('[native code]'))
 if ((''+nativePromiseThen).indexOf('[native code]') === -1) {
+    console.log("is noop")
     // If the native promise' prototype is patched, we cannot rely on zone echoing.
     // Disable that here:
     incrementExpectedAwaits = decrementExpectedAwaits = nop;
