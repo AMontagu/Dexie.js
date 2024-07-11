@@ -12,12 +12,10 @@ const ERRORS_TO_IGNORE = [
 ];
 
 export default {
-  input: path.resolve(__dirname, '../../tools/tmp/src/index-umd.js'),
+  input: path.resolve(__dirname, '../../tools/tmp/src/index.js'),
   output: [{
     file: path.resolve(__dirname, '../../dist/dexie.js'),
-    format: 'umd',
-    name: 'Dexie',
-    globals: {}, // For tests, use "QUnit". For addons, use "Dexie"
+    format: 'es',
     sourcemap: true,
     banner: readFileSync(path.resolve(__dirname, 'banner.txt')),
   }],

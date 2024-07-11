@@ -2,7 +2,7 @@
   "name": "dexie",
   "version": "4.0.8",
   "description": "A Minimalistic Wrapper for IndexedDB",
-  "main": "dist/dexie.js",
+  "main": "dist/dexie.mjs",
   "module": "dist/dexie.mjs",
   "jsnext:main": "dist/dexie.mjs",
   "exports": {
@@ -10,23 +10,24 @@
       "production": {
         "module": "./import-wrapper-prod.mjs",
         "import": "./import-wrapper-prod.mjs",
-        "require": "./dist/dexie.min.js",
-        "default": "./dist/dexie.min.js"
+        "require": "./dist/dexie.min.mjs",
+        "default": "./dist/dexie.min.mjs"
       },
       "development": {
         "module": "./import-wrapper.mjs",
         "import": "./import-wrapper.mjs",
-        "require": "./dist/dexie.js",
-        "default": "./dist/dexie.js"
+        "require": "./dist/dexie.mjs",
+        "default": "./dist/dexie.mjs"
       },
       "default": {
         "module": "./import-wrapper.mjs",
         "import": "./import-wrapper.mjs",
-        "require": "./dist/dexie.js",
-        "default": "./dist/dexie.js"
+        "require": "./dist/dexie.mjs",
+        "default": "./dist/dexie.mjs"
       }
     },
     "./package.json": "./package.json",
+    "./dist/dexie.js": "./dist/dexie.mjs",
     "./dist/*": "./dist/*"
   },
   "typings": "dist/dexie.d.ts",
