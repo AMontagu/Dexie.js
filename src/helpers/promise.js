@@ -35,6 +35,9 @@ import {exceptions} from '../errors';
 // Used in Promise constructor to emulate a private constructor.
 var INTERNAL = {};
 
+var counterCallEnter = 0;
+var counterCallLeave = 0;
+
 const
     ZONE_ECHO_LIMIT = 100,
     [resolvedNativePromise, nativePromiseProto, resolvedGlobalPromise] = typeof Promise === 'undefined' ?
@@ -535,11 +538,13 @@ export function wrap (fn, errorCatcher) {
             outerScope = PSD;
 
         try {
+            console.log("wrap try")
             switchToZone(psd, true);
             return fn.apply(this, arguments);
         } catch (e) {
             errorCatcher && errorCatcher(e);
         } finally {
+            console.log("wrap finally")
             switchToZone(outerScope, false);
             if (wasRootExec) endMicroTickScope();
         }
@@ -634,7 +639,7 @@ export function onPossibleParallellAsync (possiblePromise) {
     return possiblePromise;
 }
 
-function zoneEnterEcho(targetZone) {
+function zoneEnterEcho(targetZone, depth=0) {
     console.log("enter zone echo")
     ++totalEchoes;
     //console.log("Total echoes ", totalEchoes);
@@ -644,14 +649,15 @@ function zoneEnterEcho(targetZone) {
     }
 
     zoneStack.push(PSD);
-    switchToZone(targetZone, true);
+    switchToZone(targetZone, true, depth);
 }
 
-function zoneLeaveEcho() {
+function zoneLeaveEcho(depth=0) {
+    console.log("zoneLeaveEcho")
     var zone = zoneStack[zoneStack.length-1];
     zoneStack.pop();
     if(zone) {
-        switchToZone(zone, false);
+        switchToZone(zone, false, depth);
     }
 }
 
@@ -662,7 +668,12 @@ function enqueueNativeMicroTask (job) {
     nativePromiseThen.call(resolvedNativePromise, job);
 }
 
-function switchToZone (targetZone, bEnteringZone) {
+function switchToZone (targetZone, bEnteringZone, depth=0) {
+    if(bEnteringZone) {
+        console.log("enter: ", counterCallEnter++, " leave: ", counterCallLeave)
+    } else {
+        console.log("enter: ", counterCallEnter, " leave: ", counterCallLeave++)
+    }
     console.log("-------------------------------------------------------------------")
     var currentZone = PSD;
     let enterOrLeaveZone = false;
@@ -694,11 +705,13 @@ function switchToZone (targetZone, bEnteringZone) {
     console.log("zoneEchoes after ", zoneEchoes)
     // console.log("first condition", bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD))
     // if (bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD)) {
-    if (enterOrLeaveZone) {
+    if (enterOrLeaveZone && depth===0) {
         // Enter or leave zone asynchronically as well, so that tasks initiated during current tick
         // will be surrounded by the zone when they are invoked.
-        // queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
-        enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        console.log("-------------self----------------")
+
+        queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone, depth++) : zoneLeaveEcho.bind(null, depth++));
+        // enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone, depth++) : zoneLeaveEcho.bind(null, depth++));
     }
     if (targetZone === PSD) return;
 
@@ -749,9 +762,11 @@ function snapShot () {
 export function usePSD (psd, fn, a1, a2, a3) {
     var outerScope = PSD;
     try {
+        console.log("usePSD try")
         switchToZone(psd, true);
         return fn(a1, a2, a3);
     } finally {
+        console.log("usePSD finally")
         switchToZone(outerScope, false);
     }
 }
@@ -760,10 +775,12 @@ function nativeAwaitCompatibleWrap(fn, zone, possibleAwait, cleanup) {
     return typeof fn !== 'function' ? fn : function () {
         var outerZone = PSD;
         if (possibleAwait) incrementExpectedAwaits();
+        console.log("nativeAwaitCompatibleWrap try")
         switchToZone(zone, true);
         try {
             return fn.apply(this, arguments);
         } finally {
+            console.log("nativeAwaitCompatibleWrap finally")            
             switchToZone(outerZone, false);
             if (cleanup) queueMicrotask(decrementExpectedAwaits);
         }

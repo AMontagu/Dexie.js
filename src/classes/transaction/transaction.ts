@@ -132,6 +132,14 @@ export class Transaction implements ITransaction {
       this.on("abort").fire(ev);
     });
     idbtrans.oncomplete = wrap(() => {
+      console.log("##########################################")
+      console.log("##########################################")
+      console.log("##########################################")
+      console.log("##########################################")
+      console.log("##########################################")
+      console.log("##########################################")
+      console.log("##########################################")
+      console.log("##########################################")
       this.active = false;
       this._resolve();
       if ('mutatedParts' in idbtrans) {
