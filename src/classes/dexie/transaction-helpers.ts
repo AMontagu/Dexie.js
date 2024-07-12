@@ -34,6 +34,8 @@ export function enterTransactionScope(
   scopeFunc: ()=>PromiseLike<any> | any
 ) {
   return Promise.resolve().then(() => {
+
+    console.log("storeNames", storeNames, mode, parentTransaction)
     // Keep a pointer to last non-transactional PSD to use if someone calls Dexie.ignoreTransaction().
     const transless = PSD.transless || PSD;
     // Our transaction.
@@ -71,6 +73,7 @@ export function enterTransactionScope(
       }
     }
     console.log("before modifying code2")
+    console.log("scopeFunc", scopeFunc)
 
     // Support for native async await.
     const scopeFuncIsAsync = isAsyncFunction(scopeFunc);
@@ -105,6 +108,7 @@ export function enterTransactionScope(
       promiseResolved = Promise.resolve(returnValue).then((x) => {
         console.log("promiseResolved resolve then", x)
         console.log("trans.active", trans.active)
+        return x;
         if(trans.active) {
           console.log("trans still active", x)
           return x;

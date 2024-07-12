@@ -466,7 +466,9 @@ export class Dexie implements IDexie {
             rejection (e);
     }
     // If this is a sub-transaction, lock the parent and then launch the sub-transaction.
+    console.log("before enterTransactionScope")
     const enterTransaction = enterTransactionScope.bind(null, this, idbMode, storeNames, parentTransaction, scopeFunc);
+    console.log("after enterTransactionScope")
     return (parentTransaction ?
         parentTransaction._promise(idbMode, enterTransaction, "lock") :
         PSD.trans ?

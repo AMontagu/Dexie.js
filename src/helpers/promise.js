@@ -647,8 +647,8 @@ export function onPossibleParallellAsync (possiblePromise) {
     return possiblePromise;
 }
 
-function zoneEnterEcho(targetZone) {
-    console.log("$$$$$$$$$$$$$$$$$$$$$$$$ zoneEnterEcho $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+function zoneEnterEcho(targetZone, depth=0) {
+    console.log("$$$$$$$$$$$$$$$$$$$$$$$$ zoneEnterEcho $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", depth)
     ++totalEchoes;
     console.log("Total echoes ", totalEchoes, "task.echoes", task.echoes);
     //console.log("Total echoes ", totalEchoes);
@@ -659,13 +659,16 @@ function zoneEnterEcho(targetZone) {
     }
 
     zoneStack.push(PSD);
-    switchToZone(targetZone, true);
+    switchToZone(targetZone, true, depth);
+
 }
 
-function zoneLeaveEcho() {
+function zoneLeaveEcho(depth=0) {
     var zone = zoneStack[zoneStack.length-1];
     zoneStack.pop();
-    switchToZone(zone, false);
+    if (zone) {
+        switchToZone(zone, false, depth);
+    }
 }
 
 function enqueueNativeMicroTask (job) {
@@ -675,13 +678,16 @@ function enqueueNativeMicroTask (job) {
     nativePromiseThen.call(resolvedNativePromise, job);
 }
 
-function switchToZone (targetZone, bEnteringZone) {
+function switchToZone (targetZone, bEnteringZone, depth=0) {
     var currentZone = PSD;
     if (bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD)) {
         // Enter or leave zone asynchronically as well, so that tasks initiated during current tick
         // will be surrounded by the zone when they are invoked.
-        // queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
-        enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        if (depth===0) {
+            console.log("icicicicicicic", targetZone, bEnteringZone, depth)
+            queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone, ++depth) : zoneLeaveEcho.bind(null, ++depth));
+        }
+        // enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
     }
     if (targetZone === PSD) return;
 
