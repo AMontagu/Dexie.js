@@ -46,6 +46,8 @@ export function enterTransactionScope(
       transless: transless
     };
 
+    console.log(10)
+
     if (parentTransaction) {
       // Emulate transaction commit awareness for inner transaction (must 'commit' when the inner transaction has no more operations ongoing)
       trans.idbtrans = parentTransaction.idbtrans;
@@ -70,6 +72,7 @@ export function enterTransactionScope(
         return rejection(ex);
       }
     }
+    console.log(11)
 
     // Support for native async await.
     const scopeFuncIsAsync = isAsyncFunction(scopeFunc);
@@ -85,7 +88,9 @@ export function enterTransactionScope(
         if (scopeFuncIsAsync) {
           // scopeFunc is a native async function - we know for sure returnValue is native promise.
           var decrementor = decrementExpectedAwaits.bind(null, null);
-          returnValue.then(decrementor, decrementor);
+
+          console.log("decrementor", decrementor(), returnValue)
+          // returnValue.then(decrementor, decrementor).then(decrementor, decrementor);
         } else if (typeof returnValue.next === 'function' && typeof returnValue.throw === 'function') {
           // scopeFunc returned an iterator with throw-support. Handle yield as await.
           returnValue = awaitIterator(returnValue);
@@ -95,21 +100,27 @@ export function enterTransactionScope(
     console.log("iam a looser3")
     return (returnValue && typeof returnValue.then === 'function' ?
       // Promise returned. User uses promise-style transactions.
-      Promise.resolve(returnValue).then(x => trans.active ?
-        x // Transaction still active. Continue.
-        : rejection(new exceptions.PrematureCommit(
-          "Transaction committed too early3. See http://bit.ly/2kdckMn")))
+      Promise.resolve(returnValue).then(x => {
+        console.log("icicic x", x)
+        if(trans.active) {
+          return x
+        }
+        return rejection(new exceptions.PrematureCommit("Transaction committed too early3. See http://bit.ly/2kdckMn")) 
+      })
       // No promise returned. Wait for all outstanding promises before continuing. 
       : promiseFollowed.then(() => returnValue)
     ).then(x => {
-      // sub transactions don't react to idbtrans.oncomplete. We must trigger a completion:
-      if (parentTransaction) trans._resolve();
-      // wait for trans._completion
-      // (if root transaction, this means 'complete' event. If sub-transaction, we've just fired it ourselves)
-      return trans._completion.then(() => x);
+      // // sub transactions don't react to idbtrans.oncomplete. We must trigger a completion:
+      // if (parentTransaction) trans._resolve();
+      // // wait for trans._completion
+      // // (if root transaction, this means 'complete' event. If sub-transaction, we've just fired it ourselves)
+      // return trans._completion.then(() => x);
+      return
     }).catch(e => {
-      trans._reject(e); // Yes, above then-handler were maybe not called because of an unhandled rejection in scopeFunc!
-      return rejection(e);
+      console.error(e)
+      // trans._reject(e); // Yes, above then-handler were maybe not called because of an unhandled rejection in scopeFunc!
+      // return rejection(e);
+      return
     });
   });
 }

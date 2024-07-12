@@ -121,6 +121,8 @@ export class Transaction implements ITransaction {
         : idbdb.transaction(this.storeNames, this.mode, { durability: this.chromeTransactionDurability })
       ) as IDBTransaction;
 
+    console.log(idbtrans)
+
     idbtrans.onerror = wrap(ev => {
       preventDefault(ev);// Prohibit default bubbling to window.error
       this._reject(idbtrans.error);
@@ -128,12 +130,14 @@ export class Transaction implements ITransaction {
     idbtrans.onabort = wrap(ev => {
       preventDefault(ev);
       this.active && this._reject(new exceptions.Abort(idbtrans.error));
+      console.log(3)
       this.active = false;
       this.on("abort").fire(ev);
     });
     idbtrans.oncomplete = wrap(() => {
-      this.active = false;
-      this._resolve();
+      console.log(4)
+      // this.active = false;
+      // this._resolve();
       if ('mutatedParts' in idbtrans) {
         globalEvents.storagemutated.fire(idbtrans["mutatedParts"]);
       }
@@ -240,6 +244,7 @@ export class Transaction implements ITransaction {
    */
   abort() {
     if (this.active) {
+      console.log(5)
       this.active = false;
       if (this.idbtrans) this.idbtrans.abort();
       this._reject(new exceptions.Abort());

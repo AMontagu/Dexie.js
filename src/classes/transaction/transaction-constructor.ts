@@ -55,10 +55,12 @@ export function createTransactionConstructor(db: Dexie) {
       
       this._completion.then(
           ()=> {
-              this.active = false;
-              this.on.complete.fire();
+              console.log(1)
+              // this.active = false;
+              // this.on.complete.fire();
           },
           e => {
+              console.log(2)
               var wasActive = this.active;
               this.active = false;
               this.on.error.fire(e);
