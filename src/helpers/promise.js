@@ -635,6 +635,7 @@ export function onPossibleParallellAsync (possiblePromise) {
 }
 
 function zoneEnterEcho(targetZone) {
+    console.log("enter zone echo")
     ++totalEchoes;
     //console.log("Total echoes ", totalEchoes);
     //if (task.echoes === 1) console.warn("Cancelling echoing of async context.");
@@ -649,15 +650,55 @@ function zoneEnterEcho(targetZone) {
 function zoneLeaveEcho() {
     var zone = zoneStack[zoneStack.length-1];
     zoneStack.pop();
-    switchToZone(zone, false);
+    if(zone) {
+        switchToZone(zone, false);
+    }
+}
+
+function enqueueNativeMicroTask (job) {
+    //
+    // Precondition: nativePromiseThen !== undefined
+    //
+    nativePromiseThen.call(resolvedNativePromise, job);
 }
 
 function switchToZone (targetZone, bEnteringZone) {
+    console.log("-------------------------------------------------------------------")
     var currentZone = PSD;
-    if (bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD)) {
+    let enterOrLeaveZone = false;
+    let originalZoneEchoes = zoneEchoes;
+    console.log("targetZone ", targetZone)
+    console.log("zoneEchoes before ", zoneEchoes)
+    if (bEnteringZone) {
+        if(!task.echoes) {
+            enterOrLeaveZone = false;
+        } else {
+            zoneEchoes++
+            enterOrLeaveZone = !zoneEchoes || targetZone !== PSD
+        }
+        // enterOrLeaveZone = task.echoes && (!zoneEchoes++ || targetZone !== PSD);
+        console.log(`condition with bEnteringZone: task.echoes(${task.echoes}) && (!zoneEchoes(${!zoneEchoes}) || targetZone(${targetZone}) !== PSD(${PSD}))`)
+    } else {
+        // --zoneEchoes
+        if (!originalZoneEchoes) {
+            enterOrLeaveZone = false;
+        } else {
+            --zoneEchoes;
+            enterOrLeaveZone = !zoneEchoes || targetZone !== PSD;
+        }
+        // enterOrLeaveZone = originalZoneEchoes && (!--zoneEchoes || targetZone !== PSD);
+        console.log(`condition without bEnteringZone: originalZoneEchoes(${originalZoneEchoes}) && (!zoneEchoes(${!zoneEchoes}) || targetZone(${targetZone}) !== PSD(${PSD}))`)
+    }
+    // console.log("enterOrLeaveZone", enterOrLeaveZone)
+
+    console.log("zoneEchoes after ", zoneEchoes)
+    // console.log("first condition", bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD))
+    // if (bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD)) {
+    if (enterOrLeaveZone) {
         // Enter or leave zone asynchronically as well, so that tasks initiated during current tick
         // will be surrounded by the zone when they are invoked.
-        queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        // queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
     }
     if (targetZone === PSD) return;
 
@@ -666,6 +707,7 @@ function switchToZone (targetZone, bEnteringZone) {
     // Snapshot on every leave from global zone.
     if (currentZone === globalPSD) globalPSD.env = snapShot();
 
+    console.log("patchGlobalPromise", patchGlobalPromise)
     if (patchGlobalPromise) {
         // Let's patch the global and native Promises (may be same or may be different)
         var GlobalPromise = globalPSD.env.Promise;
