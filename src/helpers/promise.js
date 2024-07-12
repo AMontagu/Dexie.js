@@ -595,9 +595,11 @@ export function newScope (fn, props, a1, a2) {
 // Function to call if scopeFunc returns NativePromise
 // Also for each NativePromise in the arguments to Promise.all()
 export function incrementExpectedAwaits() {
+    console.log("############### incrementExpectedAwaits #################")
     if (!task.id) task.id = ++taskCounter;
     ++task.awaits;
     task.echoes += ZONE_ECHO_LIMIT;
+    console.log("task id ", task.id, " task awaits ", task.awaits, " task echoes ", task.echoes)
     return task.id;
 }
 
@@ -605,9 +607,20 @@ export function incrementExpectedAwaits() {
 // Also call this when a native await calls then method on a promise. In that case, don't supply
 // sourceTaskId because we already know it refers to current task.
 export function decrementExpectedAwaits() {
-    if (!task.awaits) return false;
-    if (--task.awaits === 0) task.id = 0;
+    console.log("-------------- in decrementExpectedAwaits ----------------")
+    console.log(task.awaits)
+    if (!task.awaits) {
+        console.log("task awaits is 0")
+        return false;
+    }
+    if (--task.awaits === 0) {
+        console.log("--task awaits is 0")
+        task.id = 0;
+    }
+    console.log("ZONE_ECHO_LIMIT ", ZONE_ECHO_LIMIT)
     task.echoes = task.awaits * ZONE_ECHO_LIMIT; // Will reset echoes to 0 if awaits is 0.
+    console.log("tach echoes ", task.echoes)
+    console.log("---------------------------------------------")
     return true;
 }
 
@@ -635,10 +648,13 @@ export function onPossibleParallellAsync (possiblePromise) {
 }
 
 function zoneEnterEcho(targetZone) {
+    console.log("$$$$$$$$$$$$$$$$$$$$$$$$ zoneEnterEcho $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
     ++totalEchoes;
+    console.log("Total echoes ", totalEchoes, "task.echoes", task.echoes);
     //console.log("Total echoes ", totalEchoes);
-    //if (task.echoes === 1) console.warn("Cancelling echoing of async context.");
+    if (task.echoes === 1) console.warn("Cancelling echoing of async context.");
     if (!task.echoes || --task.echoes === 0) {
+        console.log("STRANGEEEEEEE")
         task.echoes = task.awaits = task.id = 0; // Cancel echoing.
     }
 
@@ -652,12 +668,20 @@ function zoneLeaveEcho() {
     switchToZone(zone, false);
 }
 
+function enqueueNativeMicroTask (job) {
+    //
+    // Precondition: nativePromiseThen !== undefined
+    //
+    nativePromiseThen.call(resolvedNativePromise, job);
+}
+
 function switchToZone (targetZone, bEnteringZone) {
     var currentZone = PSD;
     if (bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD)) {
         // Enter or leave zone asynchronically as well, so that tasks initiated during current tick
         // will be surrounded by the zone when they are invoked.
-        queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        // queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
     }
     if (targetZone === PSD) return;
 
@@ -734,6 +758,8 @@ export function execInGlobalContext(cb) {
         if (zoneEchoes === 0) {
             cb();
         } else {
+            // This is not existing anymore
+            console.log("############################################ this should not be called ############################")
             enqueueNativeMicroTask(cb);
         }
     } else {

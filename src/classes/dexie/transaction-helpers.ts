@@ -70,6 +70,7 @@ export function enterTransactionScope(
         return rejection(ex);
       }
     }
+    console.log("before modifying code2")
 
     // Support for native async await.
     const scopeFuncIsAsync = isAsyncFunction(scopeFunc);
@@ -87,18 +88,20 @@ export function enterTransactionScope(
         if (scopeFuncIsAsync) {
           // scopeFunc is a native async function - we know for sure returnValue is native promise.
           var decrementor = decrementExpectedAwaits.bind(null, null);
+          console.log("decrementor", decrementor);
+          // returnValue = returnValue.then(decrementor, decrementor);
           returnValue.then(decrementor, decrementor);
         } else if (typeof returnValue.next === 'function' && typeof returnValue.throw === 'function') {
           // scopeFunc returned an iterator with throw-support. Handle yield as await.
+          console.log("returnValue is an iterator")
           returnValue = awaitIterator(returnValue);
         }
       }
     }, zoneProps);
     
-    console.log("before modifying code2", returnValue)
     let promiseResolved = null;
     if(returnValue && typeof returnValue.then === 'function') {
-      console.log("returnValue is a promise")
+      console.log("returnValue is a promise", returnValue)
       promiseResolved = Promise.resolve(returnValue).then((x) => {
         console.log("promiseResolved resolve then", x)
         console.log("trans.active", trans.active)
@@ -108,6 +111,9 @@ export function enterTransactionScope(
         }
         return rejection(new exceptions.PrematureCommit("Transaction committed too early3. See http://bit.ly/2kdckMn"))
       })
+    } else {
+      console.log("returnValue is not a promise")
+      return promiseFollowed.then(() => returnValue)
     }
     if (promiseResolved) {
       console.log("promiseResolved", promiseResolved)
