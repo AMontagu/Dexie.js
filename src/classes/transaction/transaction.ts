@@ -126,12 +126,14 @@ export class Transaction implements ITransaction {
       this._reject(idbtrans.error);
     });
     idbtrans.onabort = wrap(ev => {
+      console.log("Transaction.onabort")
       preventDefault(ev);
       this.active && this._reject(new exceptions.Abort(idbtrans.error));
       this.active = false;
       this.on("abort").fire(ev);
     });
     idbtrans.oncomplete = wrap(() => {
+      console.log("Transaction.oncomplete")
       this.active = false;
       this._resolve();
       if ('mutatedParts' in idbtrans) {
@@ -240,6 +242,7 @@ export class Transaction implements ITransaction {
    */
   abort() {
     if (this.active) {
+      console.log("Transaction.abort")
       this.active = false;
       if (this.idbtrans) this.idbtrans.abort();
       this._reject(new exceptions.Abort());

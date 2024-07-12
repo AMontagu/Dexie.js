@@ -73,6 +73,7 @@ export function enterTransactionScope(
 
     // Support for native async await.
     const scopeFuncIsAsync = isAsyncFunction(scopeFunc);
+    console.log("scopeFuncIsAsync", scopeFuncIsAsync)
     if (scopeFuncIsAsync) {
       incrementExpectedAwaits();
     }
@@ -81,6 +82,7 @@ export function enterTransactionScope(
     const promiseFollowed = Promise.follow(() => {
       // Finally, call the scope function with our table and transaction arguments.
       returnValue = scopeFunc.call(trans, trans);
+      console.log("promiseFollowed returnValue", returnValue)
       if (returnValue) {
         if (scopeFuncIsAsync) {
           // scopeFunc is a native async function - we know for sure returnValue is native promise.
@@ -92,24 +94,54 @@ export function enterTransactionScope(
         }
       }
     }, zoneProps);
-    console.log("iam a looser3")
-    return (returnValue && typeof returnValue.then === 'function' ?
-      // Promise returned. User uses promise-style transactions.
-      Promise.resolve(returnValue).then(x => trans.active ?
-        x // Transaction still active. Continue.
-        : rejection(new exceptions.PrematureCommit(
-          "Transaction committed too early3. See http://bit.ly/2kdckMn")))
-      // No promise returned. Wait for all outstanding promises before continuing. 
-      : promiseFollowed.then(() => returnValue)
-    ).then(x => {
-      // sub transactions don't react to idbtrans.oncomplete. We must trigger a completion:
-      if (parentTransaction) trans._resolve();
-      // wait for trans._completion
-      // (if root transaction, this means 'complete' event. If sub-transaction, we've just fired it ourselves)
-      return trans._completion.then(() => x);
-    }).catch(e => {
-      trans._reject(e); // Yes, above then-handler were maybe not called because of an unhandled rejection in scopeFunc!
-      return rejection(e);
-    });
+    
+    console.log("before modifying code2", returnValue)
+    let promiseResolved = null;
+    if(returnValue && typeof returnValue.then === 'function') {
+      console.log("returnValue is a promise")
+      promiseResolved = Promise.resolve(returnValue).then((x) => {
+        console.log("promiseResolved resolve then", x)
+        console.log("trans.active", trans.active)
+        if(trans.active) {
+          console.log("trans still active", x)
+          return x;
+        }
+        return rejection(new exceptions.PrematureCommit("Transaction committed too early3. See http://bit.ly/2kdckMn"))
+      })
+    }
+    if (promiseResolved) {
+      console.log("promiseResolved", promiseResolved)
+      promiseResolved.then((x) => {
+        console.log("promiseResolved then", x)
+        // sub transactions don't react to idbtrans.oncomplete. We must trigger a completion:
+        if (parentTransaction) trans._resolve();
+        // wait for trans._completion
+        // (if root transaction, this means 'complete' event. If sub-transaction, we've just fired it ourselves)
+        return trans._completion.then(() => x);
+      }).catch((e) => {
+        console.log("promiseResolved catch", e)
+        trans._reject(e); // Yes, above then-handler were maybe not called because of an unhandled rejection in scopeFunc!
+        return rejection(e);
+      });
+    }
+    return promiseResolved;
+    // return (returnValue && typeof returnValue.then === 'function' ?
+    //   // Promise returned. User uses promise-style transactions.
+    //   Promise.resolve(returnValue).then(x => trans.active ?
+    //     x // Transaction still active. Continue.
+    //     : rejection(new exceptions.PrematureCommit(
+    //       "Transaction committed too early3. See http://bit.ly/2kdckMn")))
+    //   // No promise returned. Wait for all outstanding promises before continuing. 
+    //   : promiseFollowed.then(() => returnValue)
+    // ).then(x => {
+    //   // sub transactions don't react to idbtrans.oncomplete. We must trigger a completion:
+    //   if (parentTransaction) trans._resolve();
+    //   // wait for trans._completion
+    //   // (if root transaction, this means 'complete' event. If sub-transaction, we've just fired it ourselves)
+    //   return trans._completion.then(() => x);
+    // }).catch(e => {
+    //   trans._reject(e); // Yes, above then-handler were maybe not called because of an unhandled rejection in scopeFunc!
+    //   return rejection(e);
+    // });
   });
 }
