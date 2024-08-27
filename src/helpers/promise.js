@@ -35,16 +35,23 @@ import {exceptions} from '../errors';
 // Used in Promise constructor to emulate a private constructor.
 var INTERNAL = {};
 
+
+console.log("typeof Promise", typeof Promise)
+
 const
     ZONE_ECHO_LIMIT = 100,
     [resolvedNativePromise, nativePromiseProto, resolvedGlobalPromise] = typeof Promise === 'undefined' ?
         [] :
         (()=>{
             let globalP = Promise.resolve();
-            if (typeof crypto === 'undefined' || !crypto.subtle)
+            if (typeof crypto === 'undefined' || !crypto.subtle) {
+                console.log("icicicicici", globalP, getProto(globalP).then)
                 return [globalP, getProto(globalP), globalP];
+            }
             // Generate a native promise (as window.Promise may have been patched)
             const nativeP = crypto.subtle.digest("SHA-512", new Uint8Array([0]));
+
+            console.log("icicicicici2", nativeP, globalP, getProto(nativeP).then)
             return [
                 nativeP,
                 getProto(nativeP),
@@ -655,7 +662,8 @@ function switchToZone (targetZone, bEnteringZone) {
     if (bEnteringZone ? task.echoes && (!zoneEchoes++ || targetZone !== PSD) : zoneEchoes && (!--zoneEchoes || targetZone !== PSD)) {
         // Enter or leave zone asynchronically as well, so that tasks initiated during current tick
         // will be surrounded by the zone when they are invoked.
-        queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        // queueMicrotask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
+        enqueueNativeMicroTask(bEnteringZone ? zoneEnterEcho.bind(null, targetZone) : zoneLeaveEcho);
     }
     if (targetZone === PSD) return;
 
@@ -724,6 +732,13 @@ function nativeAwaitCompatibleWrap(fn, zone, possibleAwait, cleanup) {
             if (cleanup) queueMicrotask(decrementExpectedAwaits);
         }
     };
+}
+
+function enqueueNativeMicroTask (job) {
+    //
+    // Precondition: nativePromiseThen !== undefined
+    //
+    nativePromiseThen.call(resolvedNativePromise, job);
 }
 
 /** Execute callback in global context */

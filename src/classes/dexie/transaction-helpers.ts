@@ -33,6 +33,7 @@ export function enterTransactionScope(
   parentTransaction: Transaction | undefined,
   scopeFunc: ()=>PromiseLike<any> | any
 ) {
+  console.log("--------------- enterTransactionScope -----------------")
   return Promise.resolve().then(() => {
     // Keep a pointer to last non-transactional PSD to use if someone calls Dexie.ignoreTransaction().
     const transless = PSD.transless || PSD;
@@ -101,12 +102,14 @@ export function enterTransactionScope(
       // No promise returned. Wait for all outstanding promises before continuing. 
       : promiseFollowed.then(() => returnValue)
     ).then(x => {
+      console.log("--------------- end enterTransactionScope ok -----------------")
       // sub transactions don't react to idbtrans.oncomplete. We must trigger a completion:
       if (parentTransaction) trans._resolve();
       // wait for trans._completion
       // (if root transaction, this means 'complete' event. If sub-transaction, we've just fired it ourselves)
       return trans._completion.then(() => x);
     }).catch(e => {
+      console.log("--------------- end enterTransactionScope fail -----------------")
       trans._reject(e); // Yes, above then-handler were maybe not called because of an unhandled rejection in scopeFunc!
       return rejection(e);
     });
